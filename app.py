@@ -1,29 +1,37 @@
+import os
 from flask import Flask, request
 import requests
 
 app = Flask(__name__)
 
-TELEGRAM_TOKEN = 'توکن رباتت اینجا'
-TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
+TELEGRAM_BOT_TOKEN = '7988601127:AAFXcCLC94rdXTMNQ_YudTL0VqPBjuhdQ1w'
+CHAT_ID = '256764836'
+TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
 
-@app.route('/', methods=['POST'])
+@app.route('/')
+def home():
+    return "Bot is running!"
+
+@app.route('/webhook', methods=['POST'])
 def webhook():
-    data = request.get_json()
-    if data and 'message' in data:
-        chat_id = data['message']['chat']['id']
-        text = data['message'].get('text', '')
-        if text:
-            send_message(chat_id, "سلام! حالت چطوره؟ 😊")
-    return 'ok'
+    data = request.json
+    try:
+        wallet = data.get("wallet")
+        token = data.get("token")
+        tx_hash = data.get("tx_hash")
 
-def send_message(chat_id, text):
-    url = f"{TELEGRAM_API_URL}/sendMessage"
-    payload = {'chat_id': chat_id, 'text': text}
-    requests.post(url, json=payload)
+        message = f"🚨 Whale Alert!\nWallet: `{wallet}`\nToken: `{token}`\nTX: https://solscan.io/tx/{tx_hash}"
+        payload = {
+            "chat_id": CHAT_ID,
+            "text": message,
+            "parse_mode": "Markdown"
+        }
+        requests.post(TELEGRAM_API_URL, json=payload)
 
-@app.route('/', methods=['GET'])
-def index():
-    return 'ربات آماده دریافت پیام است.'
+        return {'ok': True}, 200
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}, 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
